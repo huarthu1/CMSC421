@@ -3,6 +3,7 @@
 #include <linux/kernel.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <math.h>
 #include <errno.h>
 /*#define NULL 0*/
@@ -51,6 +52,18 @@ SkipNode * CreateSkipNode(int isStart, int id, int leve);
 SkipListManager * CreateSkipListManager(int maxLevel, int prob);
 
 /* Add a SkipNode */
-int AddSkipNode(int id, SkipListManager * m);
+void AddSkipNode(int id, SkipListManager * m);
+
+/* Search for a SkipNode */
+SkipNode * FindSkipNode(int id, SkipListManager * m);
+
+/* Add a MailBox into the skip list by id */
+void AddMailBox(int id, SkipListManager * m);
+
+/* Delete the Entire tree of SkipNodes */
+void DeleteList(SkipListManager * m);
+
+/* DEBUG */
+void printList(SkipListManager * m);
 
 #endif

@@ -35,7 +35,8 @@ int LevelUpCount(SkipListManager * m) {
   int levelCount = 1;
   int levelUp = RNG(m->m_prob);
   while(levelUp && levelCount <= m->m_maxLevel) {
-    levelCount ++;
+    if(levelCount < m->m_maxLevel)
+      levelCount ++;
     levelUp = RNG(m->m_prob);
   }
   return levelCount;
@@ -57,10 +58,15 @@ MailBox * CreateMailBox(char * message, MailBox * mail) {
 SkipNode * CreateSkipNode(int isStart, int id, int level) {
   SkipNode * myNode = malloc(sizeof(SkipNode));
   myNode->m_next = malloc(level * sizeof(SkipNode));
+  int a;
+  /* Set all next pointers to NULL by default */
+  for(a = 0; a < level; a++)
+    myNode->m_next[a] = NULL;
   myNode->m_id = id;
   myNode->m_mail = NULL;
   myNode->m_level = level;
   myNode->m_isStart = isStart;
+  return myNode;
 }
   
 /* SkipListManmager Constructor */
@@ -68,75 +74,168 @@ SkipListManager * CreateSkipListManager(int maxLevel, int prob) {
   SkipListManager * myManager = malloc(sizeof(SkipListManager));
   myManager->m_maxLevel = maxLevel;
   myManager->m_prob = prob;
-  myManager->m_start = CreateSkipNode(1, 0, 1);
+  myManager->m_start = CreateSkipNode(1, 0, maxLevel);
+  return myManager;
 }
 
 /* Add a SkipNode */
-int AddSkipNode(int id, SkipListManager * m) {
+void AddSkipNode(int id, SkipListManager * m) {
   /* Initialize variables */
-  SkipNode * tempNode = m->m_start;         /* Temp Node for list traversing */
+  SkipNode * currentNode = m->m_start;         /* Temp Node for list traversing */
   SkipNode ** lastNodes;                    /* Last visited nodes in respective levels */  
   SkipNode * newNode;                       /* Newly created node */
   int levelCount;                           /* Keep track of levels for previous */
+  int traverseLevel;                        /* Level of nodes traversing through */
   int a;                                    /* For loops */
   /* Set up node tracker for last visited nodes in all levels */
   lastNodes = malloc(m->m_maxLevel * sizeof(SkipNode));
   for(a = 0; a < m->m_maxLevel; a++)
-    lastNodes[a] = NULL;
-  /* Traverse through the list */
-  while(tempNode != NULL) {
-    /* If there are no nodes in the list and tempNode is Start Node*/
-    /* Link start node to new node, link new node to NULL */
-    /*if(tempNode->m_next[0] == NULL && tempNode->m_isStart) {
-      levelCount = LevelUpCount(m);
-      newNode = CreateSkipNode(0, id, levelCount);
-      tempNode->m_next[0] = newNode;
-      for(a = 0; a < levelCount; a++)
-        newNode->m_next[a] = NULL;
-    }*/
-    /* If new node is larger than all nodes */
-    if(tempNode->m_next[0] == NULL) {
-      levelCount = LevelUpCount(m);
-      newNode = CreateSkipNode(0, id, levelCount);
-      for(a = 0; a < levelCount; a++) {
-        /* Link previous nodes to new node */
-        if(a < tempNode->m_level)
-          tempNode->m_next[a] = newNode;
-        else if(lastNodes[a] != NULL)
-          lastNodes[a]->m_next[a] = newNode;
-        /* Link new node to NULL */
-        newNode->m_next[a] = NULL;
+    lastNodes[a] = m->m_start;
+  traverseLevel = (m->m_maxLevel) - 1;
+  while(currentNode != NULL) {
+    /* If next node is NULL, move down level. Or insert if it is the last level */
+    if(currentNode->m_next[traverseLevel] == NULL) {
+      if(traverseLevel > 0) {
+        /* Record last visited node in this level before leveling down */
+        lastNodes[traverseLevel] = currentNode;
+        traverseLevel --;
+      }
+      /* Insert if 1st level reached */
+      else {
+        lastNodes[traverseLevel] = currentNode;
+        levelCount = LevelUpCount(m);
+        newNode = CreateSkipNode(0, id, levelCount);
+        /* Link new node to the next nodes */
+        for(a = 0; a < levelCount; a++) {
+          if(lastNodes[a]->m_next[0] == NULL)
+            newNode->m_next[a] = NULL;
+          else
+            newNode->m_next[a] = lastNodes[a]->m_next[a];
+        }
+        /* Link previous nodes to the new node */
+        for(a = 0; a < m->m_maxLevel; a++)
+            lastNodes[a]->m_next[a] = newNode;
+        currentNode = NULL;
       }
     }
-    /* If the new node is smaller than the next node */
-    /* Link previous node to new node, link new node to next node */
-    else if(tempNode->m_next[0]->m_id > id) {
-      levelCount = LevelUpCount(m);
-      newNode = CreateSkipNode(0, id, levelCount);
-      for(a = 0; a < levelCount; a++) {
-        /* Link previous nodes to new node */
-        if(a < tempNode->m_level)
-          tempNode->m_next[a] = newNode;
-        else if(lastNodes[a] != NULL)
-          lastNodes[a]->m_next[a] = newNode;
-        /* Link new node to NULL */
-        newNode->m_next[a] = NULL;
+    /* If new node is smaller than next node , go down a level until last level */
+    else if(id < currentNode->m_next[traverseLevel]->m_id) {
+      if(traverseLevel > 0) {
+        lastNodes[traverseLevel] = currentNode;
+        traverseLevel --;
       }
-      /* Link new node to next nodes if not completely linked */
-      
-    }
-    /* If node ids are less than the new node id, record previously available link based on level*/
-    else {
-      int a;
-      for(a = 0; a < tempNode->m_level; a++) {
-        lastNodes[a] = tempNode;
+      /* Insert if 1st level reached */
+      else{
+        lastNodes[traverseLevel] = currentNode;
+        levelCount = LevelUpCount(m);
+        newNode = CreateSkipNode(0, id, levelCount);
+        /* Link new node to the next nodes */
+        for(a = 0; a < levelCount; a++) {
+          if(lastNodes[a]->m_next[0] == NULL)
+            newNode->m_next[a] = NULL;
+          else
+            newNode->m_next[a] = lastNodes[a]->m_next[a];
+        }
+        /* Link previous nodes to the new node */
+        for(a = 0; a < m->m_maxLevel; a++)
+            lastNodes[a]->m_next[a] = newNode;
+        currentNode = NULL;
       }
     }
-    /* Next node */;
-    tempNode = tempNode -> m_next[0];
-  }  
-  /* Free Memory */
+    /* If new node is bigger than next node, move to next node in same level */
+    else if(id > currentNode->m_next[traverseLevel]->m_id) {
+      currentNode = currentNode->m_next[traverseLevel];
+      lastNodes[traverseLevel] = currentNode;
+    }
+  }
   free(lastNodes);
 }
 
+/* Search for a SkipNode, return NULL if not found*/
+SkipNode * FindSkipNode(int id, SkipListManager * m) {
+  /* Initialize variables */
+  SkipNode * currentNode = m->m_start;  /* Node tracker */
+  int traverseLevel;                    /* Level tracker for traversing through list */
+  traverseLevel = (m->m_maxLevel) - 1;
+  /* Loop to navigate to node */
+  while(currentNode != NULL) {
+    /* Return node pointer if id found */
+    if(id == currentNode->m_id)
+      return currentNode;
+    /* If id is smaller than current node id, gown down a level until level 1*/
+    else if(id < currentNode->m_id) {
+      /* If it is lowest level, return NULL */
+      if(traverseLevel == 1)
+        return NULL;
+      else
+        traverseLevel --;
+    }
+    /* If id is bigger than current node id, go to the next node in the same level*/
+    else if(id > currentNode->m_id) {
+      /* Return NULL if end of list */
+      if(currentNode->m_next[0] == NULL)
+        return NULL;
+      else
+        currentNode = currentNode->m_next[0];
+    }
+  }
+  return NULL;
+}
 
+void DeleteList(SkipListManager * m) {
+    /* Initialize Variable */
+    SkipNode * currNode;    /* Current Node */
+    SkipNode * nextNode;    /* Next Node */
+    int a;
+    currNode = m->m_start;
+    /* Loop through the list to delete all nodes */
+    while(currNode != NULL) {
+    nextNode = currNode->m_next[0];
+    free(currNode->m_next);
+    currNode->m_next = NULL;
+    free(currNode);
+    currNode = nextNode;
+  }
+  /* Free manager */
+  free(m);
+  m = NULL;
+}
+
+/* Insert MailBox into skip list */
+void AddMailBox(int id, SkipListManager * m) {
+  /* Initialize Variables */
+  SkipNode * currentNode;     /* Targeted node associated with id */
+  MailBox * newMail;          /* New MailBox instance */
+  currentNode = FindSkipNode(id, m);
+  /* If skip node does not exist, create one and insert it into the list */
+  while(currentNode == NULL) {
+    AddSkipNode(id, m);
+    currentNode = FindSkipNode(id, m);
+  }
+  /* Add MailBox to the queue in the SkipNode */
+  if(currentNode != NULL) {
+    new
+  }
+}
+
+/* DEBUG */
+void printList(SkipListManager * m) {
+  SkipNode * currNode = m->m_start;
+  while(currNode != NULL) {
+    printf("%d\n", currNode->m_id);
+    currNode = currNode->m_next[0];
+  }
+  /*printf("%d\n", currNode->m_id);
+  currNode = currNode->m_next[0];
+  printf("%d\n", currNode->m_id);
+  currNode = currNode->m_next[0];
+  printf("%d\n", currNode->m_id);
+  currNode = currNode->m_next[0];
+  printf("%d\n", currNode->m_id);
+  currNode = currNode->m_next[0];
+  printf("%d\n", currNode->m_id);
+  currNode = currNode->m_next[0];
+  printf("%d\n", currNode->m_id);
+  currNode = currNode->m_next[0];
+  printf("%d\n", currNode->m_id);*/
+}
