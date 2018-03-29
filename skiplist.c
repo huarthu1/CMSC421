@@ -42,20 +42,16 @@ int LevelUpCount(SkipListManager * m) {
   return levelCount;
 }
 
-/* MailBox Constructor */
-MailBox * CreateMailBox(char * message, MailBox * mail) {
-  MailBox * myBox = malloc(sizeof(MailBox));
-  myBox->m_message = message;
-  /* Check if MailBox pointer is passed in */
-  if(mail != NULL)
-    myBox->m_next = mail;
-  else
-    myBox->m_next = NULL;
-  return myBox;
+/* MailNode Constructor */
+MailNode * CreateMailNode(char * msg) {
+  MailNode * myMail = malloc(sizeof(MailNode));
+  myMail->m_message = msg;
+  myMail->m_next = NULL;
+  return myMail;
 }
 
 /* SkipNode Constructor */
-SkipNode * CreateSkipNode(int isStart, int id, int level) {
+SkipNode * CreateSkipNode(int isStart, int id, int level, int uid) {
   SkipNode * myNode = malloc(sizeof(SkipNode));
   myNode->m_next = malloc(level * sizeof(SkipNode));
   int a;
@@ -66,6 +62,7 @@ SkipNode * CreateSkipNode(int isStart, int id, int level) {
   myNode->m_mail = NULL;
   myNode->m_level = level;
   myNode->m_isStart = isStart;
+  myNode->m_uid = uid;
   return myNode;
 }
   
@@ -74,12 +71,12 @@ SkipListManager * CreateSkipListManager(int maxLevel, int prob) {
   SkipListManager * myManager = malloc(sizeof(SkipListManager));
   myManager->m_maxLevel = maxLevel;
   myManager->m_prob = prob;
-  myManager->m_start = CreateSkipNode(1, 0, maxLevel);
+  myManager->m_start = CreateSkipNode(1, -1, maxLevel, 0);
   return myManager;
 }
 
 /* Add a SkipNode */
-void AddSkipNode(int id, SkipListManager * m) {
+void AddSkipNode(int id, SkipListManager * m, int uid) {
   /* Initialize variables */
   SkipNode * currentNode = m->m_start;         /* Temp Node for list traversing */
   SkipNode ** lastNodes;                    /* Last visited nodes in respective levels */  
@@ -104,7 +101,7 @@ void AddSkipNode(int id, SkipListManager * m) {
       else {
         lastNodes[traverseLevel] = currentNode;
         levelCount = LevelUpCount(m);
-        newNode = CreateSkipNode(0, id, levelCount);
+        newNode = CreateSkipNode(0, id, levelCount, uid);
         /* Link new node to the next nodes */
         for(a = 0; a < levelCount; a++) {
           if(lastNodes[a]->m_next[0] == NULL)
@@ -128,7 +125,7 @@ void AddSkipNode(int id, SkipListManager * m) {
       else{
         lastNodes[traverseLevel] = currentNode;
         levelCount = LevelUpCount(m);
-        newNode = CreateSkipNode(0, id, levelCount);
+        newNode = CreateSkipNode(0, id, levelCount, uid);
         /* Link new node to the next nodes */
         for(a = 0; a < levelCount; a++) {
           if(lastNodes[a]->m_next[0] == NULL)
@@ -201,20 +198,26 @@ void DeleteList(SkipListManager * m) {
   m = NULL;
 }
 
-/* Insert MailBox into skip list */
-void AddMailBox(int id, SkipListManager * m) {
+/* Insert MailNode into skip list */
+void AddMailNode(int id, SkipListManager * m, char * msg) {
   /* Initialize Variables */
   SkipNode * currentNode;     /* Targeted node associated with id */
-  MailBox * newMail;          /* New MailBox instance */
+  MailNode * newMail;          /* New MailNode instance */
+  MailNode * currentMail;     /* Current Mail node */
   currentNode = FindSkipNode(id, m);
   /* If skip node does not exist, create one and insert it into the list */
   while(currentNode == NULL) {
-    AddSkipNode(id, m);
+    AddSkipNode(id, m, getuid());
     currentNode = FindSkipNode(id, m);
   }
-  /* Add MailBox to the queue in the SkipNode */
+  /* Add MailNode to the queue in the SkipNode */
   if(currentNode != NULL) {
-    new
+    /* Find the last spot in the mail linked list */
+    currentMail = currentNode->m_mail;
+    while(currentMail->m_next != NULL)
+      currentMail = currentMail->m_next;
+    newMail = CreateMailNode(msg);
+    currentMail->m_next = newMail;
   }
 }
 
